@@ -1,0 +1,62 @@
+CC = g++
+CURDIR := $(shell pwd)
+
+LIB_NAME = muduo_net_test
+DEST_DIR = $(CURDIR)/object
+INSTALL_DIR = $(CURDIR)/../../lib
+
+
+PRJ_INC += -I$(CURDIR)/
+PRJ_INC += -I$(CURDIR)/../../
+SRC_INC += $(CURDIR)
+
+
+SRC_FILES = $(subst , , $(foreach dir,$(SRC_INC),$(wildcard $(dir)/*.cc)))
+
+AR		= ar
+MAKEFILE_V = @
+
+#vpath %.cc $(subst :, ,$(sort $(dir $(SRC_FILES))))
+
+OTMP := $(notdir $(SRC_FILES))
+OTMP := $(patsubst %.cc,%.o, $(OTMP))
+
+DEP_DIR := $(DEST_DIR)
+
+OBJ_FILES += $(patsubst %,$(DEST_DIR)/%,$(OTMP))
+DEP_FILES += $(patsubst %.o,$(DEP_DIR)/%.d,$(OTMP))
+
+
+
+ifneq ($(LIB_NAME),)
+CFLAGS += -fPIC
+CXXFLAGS += -fPIC
+BIN_STATIC = lib$(LIB_NAME).a
+BIN_DYNAMIC = lib$(LIB_NAME).so
+
+ifeq ($(INSTALL_DIR),)
+INSTALL_DIR = $(CURDIR)/lib
+endif
+
+endif
+
+.PHONY:all clean
+
+
+$(INSTALL_DIR)/$(BIN_STATIC): $(OBJ_FILES)
+	$(MAKEFILE_V)echo "  AR  $^"
+	ar rcs $@ $^
+	
+
+	
+# how to compile C source
+$(DEST_DIR)/%.o: %.cc
+	$(MAKEFILE_V)echo "  $(CC)  $<"
+	$(CC) -o $@ -c $^ $(PRJ_INC) -std=c++11 -rdynamic -Wall -Wextra > $(DEP_DIR)/$*.d 
+	$(MAKEFILE_V)cp -f $(DEP_DIR)/$*.d $(DEP_DIR)/$*.d.tmp
+	$(MAKEFILE_V)sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' < $(DEP_DIR)/$*.d.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(DEP_DIR)/$*.d
+	$(MAKEFILE_V)rm -f $(DEP_DIR)/$*.d.tmp
+
+clean:
+	rm -rf $(DEST_DIR)/*
+	rm -rf $(INSTALL_DIR)/$(BIN_STATIC)
