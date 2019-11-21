@@ -1,32 +1,34 @@
-CC = g++
+
+CC	 	   = g++
+AR		   = ar
+MAKEFILE_V = @
+
 CURDIR := $(shell pwd)
 
-LIB_NAME = muduo_net_test
+LIB_NAME = muduo_net
 DEST_DIR = $(CURDIR)/object
 INSTALL_DIR = $(CURDIR)/../../lib
 
-
 PRJ_INC += -I$(CURDIR)/
+PRJ_INC += -I$(CURDIR)/poller
 PRJ_INC += -I$(CURDIR)/../../
-SRC_INC += $(CURDIR)
 
 
-SRC_FILES = $(subst , , $(foreach dir,$(SRC_INC),$(wildcard $(dir)/*.cc)))
-
-AR		= ar
-MAKEFILE_V = @
 
 #vpath %.cc $(subst :, ,$(sort $(dir $(SRC_FILES))))
-
-OTMP := $(notdir $(SRC_FILES))
-OTMP := $(patsubst %.cc,%.o, $(OTMP))
-
-DEP_DIR := $(DEST_DIR)
-
+SRC_INC    = $(CURDIR)
+SRC_FILES  = $(subst , , $(foreach dir,$(SRC_INC),$(wildcard $(dir)/*.cc)))
+OTMP      := $(notdir $(SRC_FILES))
+OTMP      := $(patsubst %.cc,%.o, $(OTMP))
 OBJ_FILES += $(patsubst %,$(DEST_DIR)/%,$(OTMP))
-DEP_FILES += $(patsubst %.o,$(DEP_DIR)/%.d,$(OTMP))
+OBJ_FILES += $(subst , , $(foreach dir,$(SRC_INC),$(wildcard $(dir)/*.cc)))
 
-
+#找出poller文件夹下的所有.cc文件转成对应目录下的.o文件
+POLLER_INC   = $(CURDIR)/poller
+POLLER_FILES = $(subst , , $(foreach dir,$(POLLER_INC),$(wildcard $(dir)/*.cc)))  
+POLL_OTMP   := $(notdir $(POLLER_FILES))
+POLL_OTMP   := $(patsubst %.cc,%.o, $(POLL_OTMP))
+POLL_OBJ    := $(patsubst %,$(DEST_DIR)/%,$(POLL_OTMP))
 
 ifneq ($(LIB_NAME),)
 CFLAGS += -fPIC
@@ -42,21 +44,16 @@ endif
 
 .PHONY:all clean
 
-
 $(INSTALL_DIR)/$(BIN_STATIC): $(OBJ_FILES)
-	$(MAKEFILE_V)echo "  AR  $^"
-	ar rcs $@ $^
+#	$(MAKEFILE_V)echo "  AR  $^"
+	ar rcs $@ $^ $(POLL_OBJ)
 	
-
 	
 # how to compile C source
 $(DEST_DIR)/%.o: %.cc
-	$(MAKEFILE_V)echo "  $(CC)  $<"
-	$(CC) -o $@ -c $^ $(PRJ_INC) -std=c++11 -rdynamic -Wall -Wextra > $(DEP_DIR)/$*.d 
-	$(MAKEFILE_V)cp -f $(DEP_DIR)/$*.d $(DEP_DIR)/$*.d.tmp
-	$(MAKEFILE_V)sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' < $(DEP_DIR)/$*.d.tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(DEP_DIR)/$*.d
-	$(MAKEFILE_V)rm -f $(DEP_DIR)/$*.d.tmp
-
+	@echo "  $(CC)  $<"
+	@$(CC) -o $@ -c $^ $(PRJ_INC) -std=c++11 -rdynamic -Wall -Wextra 
+	
 clean:
-	rm -rf $(DEST_DIR)/*
+	rm -rf $(OBJ_FILES)
 	rm -rf $(INSTALL_DIR)/$(BIN_STATIC)
