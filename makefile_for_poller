@@ -1,0 +1,28 @@
+CC = g++
+CURDIR = $(shell pwd)
+DEST_DIR = $(CURDIR)/../object
+
+SRC_INC = $(CURDIR)
+PRJ_INC += -I$(CURDIR)\
+		   -I$(CURDIR)/../../../
+
+SRC_FILES = $(subst , , $(foreach dir,$(SRC_INC),$(wildcard $(dir)/*.cc)))
+
+OTMP := $(notdir $(SRC_FILES))
+OTMP := $(patsubst %.cc,%.o, $(OTMP))
+OBJ_FILES += $(patsubst %,$(DEST_DIR)/%,$(OTMP))
+
+.PYHON: all
+
+all:target
+
+target:$(OBJ_FILES)
+	@echo "  end !!!"
+	
+$(DEST_DIR)/%.o : %.cc
+	@echo "  $(CC)  $<"
+	@$(CC) -o $@ -c $^ $(PRJ_INC) -std=c++11 -rdynamic -Wall -Wextra 
+
+clean:
+	rm -rf $(OBJ_FILES)
+
